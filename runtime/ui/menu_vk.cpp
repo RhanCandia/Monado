@@ -152,7 +152,7 @@ static void feed(ImGuiIO &io, uint32_t w, uint32_t h) {
 static const char *const k_en[][2] = {
     {"Igual que la ventana (recomendado)", "Match the window (recommended)"}, {"1x - 720p (como Switch)", "1x - 720p (like Switch)"},
     {"75 % de la ventana", "75 % of the window"}, {"50 % de la ventana", "50 % of the window"},
-    {"Dinámica (mantiene 60 FPS)", "Dynamic (holds 60 FPS)"}, {"Opciones  (F1 / Esc para volver al juego)", "Options  (F1 / Esc to go back to the game)"},
+    {"Dinámica (mantiene objetivo de FPS)", "Dynamic (adapts to target FPS)"}, {"Opciones  (F1 / Esc para volver al juego)", "Options  (F1 / Esc to go back to the game)"},
     {"Gráficos", "Graphics"}, {"Pantalla", "Display"}, {"Pantalla completa", "Fullscreen"},
     {"Resolución y escalado", "Resolution and scaling"}, {"Resolución interna", "Internal resolution"},
     {"Bilineal (suave)", "Bilinear (soft)"}, {"AMD FSR 1.0 (nítido)", "AMD FSR 1.0 (sharp)"}, {"Escalado / antialiasing", "Upscaling / anti-aliasing"},
@@ -179,7 +179,7 @@ struct TList { const char *p[8]; };
 static TList TL(const char *const *a, int n) { TList t{}; for (int i = 0; i < n && i < 8; i++) t.p[i] = T(a[i]); return t; }
 
 static const char *const k_res_ui[] = {"Igual que la ventana (recomendado)", "1x - 720p (como Switch)", "2x - 1440p", "3x - 2160p",
-                                       "75 % de la ventana", "50 % de la ventana", "Dinámica (mantiene 60 FPS)"};
+                                       "75 % de la ventana", "50 % de la ventana", "Dinámica (mantiene objetivo de FPS)"};
 static const int k_res_mode[] = {RES_MATCH, 1, 2, 3, RES_Q75, RES_Q50, RES_DYNAMIC};
 
 static void ui(void) {

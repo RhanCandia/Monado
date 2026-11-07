@@ -683,11 +683,23 @@ void xcde_limiter_done(void) {
 void xcde_limiter_spin(void) {
     static int on = -1;
     if (on < 0) { const char *e = ENV("XCDE_LIMITER_SLEEP"); on = (!e || atoi(e) != 0) && !diag_deterministic(); }
-    if (!on || lim_n < 8 || !lim_last) return;
+    if (!on || !lim_last) return;
     if (lim_turns_since_sleep >= 0) lim_turns_since_sleep++;
     uint64_t lo = ~0ull, hi = 0;
-    for (int i = 0; i < 8; i++) { if (lim_iv[i] < lo) lo = lim_iv[i]; if (lim_iv[i] > hi) hi = lim_iv[i]; }
-    if (hi - lo > 3000000) return;  // pacing not steady: leave it to the game
+    if (lim_n >= 8) {
+        for (int i = 0; i < 8; i++) { if (lim_iv[i] < lo) lo = lim_iv[i]; if (lim_iv[i] > hi) hi = lim_iv[i]; }
+    }
+    if (lim_n < 8 || hi - lo > 3000000) {
+        // [XCDE] Steam Deck / APU optimization: when frame times jitter (hi - lo > 3ms) or during the first
+        // 8 frames, do NOT abandon sleeping and spin 100% on the CPU. Spinning starves the GPU of TDP wattage.
+        // If an FPS target is set (e.g. 30 fps), sleep against the target interval (0.997 x 33.3ms = 33.23ms).
+        if (g_settings.fps > 0) {
+            uint64_t target_iv = (uint64_t)(1000000000.0 / (double)g_settings.fps * 0.997);
+            if (target_iv < lo) lo = target_iv;
+        } else {
+            return;  // pacing not steady and target unknown: leave it to the game
+        }
+    }
     uint64_t wake = lim_last + lo - 1500000, now = plat_now_ns();
     if (now >= wake) return;
     if (wake - now > 2000000) wake = now + 2000000;  // short naps: the loop re-checks in between
