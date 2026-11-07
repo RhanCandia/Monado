@@ -3,14 +3,9 @@
 set -e
 cd "$(dirname "$0")/.."
 
-STEAMDECK_FLAG=""
 BUILD_APPIMAGE=0
 for arg in "$@"; do
   case "$arg" in
-    --steamdeck|--deck)
-      STEAMDECK_FLAG="--steamdeck"
-      echo "=== Target: Steam Deck ==="
-      ;;
     --appimage)
       BUILD_APPIMAGE=1
       ;;
@@ -40,7 +35,7 @@ if [ -d "$TARGET_DIR/exefs" ]; then
 fi
 
 echo "=== Building Monado Runtime & NVN Vulkan Backend ==="
-scripts/build_rt_linux.sh $STEAMDECK_FLAG
+scripts/build_rt_linux.sh
 
 echo
 echo "=== Linking Monado (build/xcde) ==="
@@ -55,5 +50,5 @@ echo "Build complete: build/xcde and build/xcde_launcher ready."
 
 if [ "$BUILD_APPIMAGE" = "1" ]; then
   echo
-  scripts/make_appimage.sh $STEAMDECK_FLAG
+  scripts/make_appimage.sh
 fi

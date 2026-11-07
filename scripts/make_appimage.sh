@@ -4,15 +4,10 @@ set -e
 cd "$(dirname "$0")/.."
 
 APPDIR="build/AppDir"
-STEAMDECK=0
 CUSTOM_OUT=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --steamdeck|--deck)
-      STEAMDECK=1
-      shift
-      ;;
     -o|--output)
       CUSTOM_OUT="$2"
       shift 2
@@ -23,19 +18,10 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-# If not explicitly specified on the command line, check build/.target_tag
-if [ "$STEAMDECK" = "0" ] && [ -f "build/.target_tag" ]; then
-  if [ "$(cat build/.target_tag 2>/dev/null)" = "steamdeck" ]; then
-    STEAMDECK=1
-  fi
-fi
-
 if [ -n "$CUSTOM_OUT" ]; then
   OUT="$CUSTOM_OUT"
 elif [ -n "$APPIMAGE_OUT" ]; then
   OUT="$APPIMAGE_OUT"
-elif [ "$STEAMDECK" = "1" ]; then
-  OUT="Monado-x86_64-steamdeck.AppImage"
 else
   OUT="Monado-x86_64.AppImage"
 fi

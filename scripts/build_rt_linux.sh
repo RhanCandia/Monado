@@ -7,41 +7,10 @@ CC=${CC:-clang}
 CXX=${CXX:-clang++}
 PYTHON=${PYTHON:-python3}
 
-STEAMDECK=0
-for arg in "$@"; do
-  case "$arg" in
-    --steamdeck|--deck)
-      STEAMDECK=1
-      ;;
-  esac
-done
-
-TARGET_TAG="linux_generic"
-if [ "$STEAMDECK" = "1" ]; then
-  TARGET_TAG="steamdeck"
-  echo "Target configuration: Steam Deck (XCDE_TARGET_STEAMDECK)"
-fi
-
 mkdir -p build/rt build/nvn build/inc
 
-# Invalidate textures object if the target mode changed
-TARGET_TAG_FILE="build/.target_tag"
-if [ -f "$TARGET_TAG_FILE" ]; then
-  PREV_TAG=$(cat "$TARGET_TAG_FILE" 2>/dev/null || true)
-  if [ "$PREV_TAG" != "$TARGET_TAG" ]; then
-    echo "  Target mode changed ($PREV_TAG -> $TARGET_TAG): rebuilding textures.o..."
-    rm -f build/nvn/nvn_vulkan_textures.o
-  fi
-fi
-echo "$TARGET_TAG" > "$TARGET_TAG_FILE"
-
-EXTRA_TARGET_FLAGS=""
-if [ "$STEAMDECK" = "1" ]; then
-  EXTRA_TARGET_FLAGS="-DXCDE_TARGET_STEAMDECK"
-fi
-
-CF="-O1 -march=x86-64-v2 -fno-strict-aliasing -fvisibility=hidden -fdeclspec -Iruntime -Iruntime/nvn -Ithird_party -w $EXTRA_TARGET_FLAGS"
-CXXF="-std=c++17 -O1 -march=x86-64-v2 -fvisibility=hidden -fdeclspec -Iruntime -Iruntime/nvn -Iruntime/nvn/vulkan -Ithird_party/imgui -Ithird_party/imgui/backends -w $EXTRA_TARGET_FLAGS"
+CF="-O1 -march=x86-64-v2 -fno-strict-aliasing -fvisibility=hidden -fdeclspec -Iruntime -Iruntime/nvn -Ithird_party -w"
+CXXF="-std=c++17 -O1 -march=x86-64-v2 -fvisibility=hidden -fdeclspec -Iruntime -Iruntime/nvn -Iruntime/nvn/vulkan -Ithird_party/imgui -Ithird_party/imgui/backends -w"
 
 RT="loader dispatch kernel ipc fnprof platform/linux services/fs services/romfs_virtual services/am services/acc services/time \
     services/hid_set services/kbicons services/misc services/audio services/hwopus hle/heaps hle/pl hle/vi hle/nvn_boot hle/fibers hle/input hle/party \

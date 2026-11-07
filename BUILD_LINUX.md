@@ -33,16 +33,13 @@ docker build -t monado-build .
 # 2. Build Monado (runtime, Vulkan backend, recompiled game code, and launcher)
 docker run --rm -v "$PWD:/monado" -w /monado -u $(id -u):$(id -g) monado-build bash -c "scripts/build_linux.sh"
 
-# Steam Deck build:
-# docker run --rm -v "$PWD:/monado" -w /monado -u $(id -u):$(id -g) monado-build bash -c "scripts/build_linux.sh --steamdeck"
-
 # 3. (Optional) Generate the standalone AppImage
 docker run --rm -v "$PWD:/monado" -w /monado -u $(id -u):$(id -g) monado-build bash -c "scripts/make_appimage.sh"
-# Or pass --steamdeck (or --appimage to scripts/build_linux.sh):
-# docker run --rm -v "$PWD:/monado" -w /monado -u $(id -u):$(id -g) monado-build bash -c "scripts/make_appimage.sh --steamdeck"
+# Or build and package in one step:
+# docker run --rm -v "$PWD:/monado" -w /monado -u $(id -u):$(id -g) monado-build bash -c "scripts/build_linux.sh --appimage"
 ```
 
-The resulting binaries will be placed in `build/` (`xcde`, `xcde_launcher`), and the AppImage in the repository root (`Monado-x86_64.AppImage` or `Monado-x86_64-steamdeck.AppImage` when targeting Steam Deck).
+The resulting binaries will be placed in `build/` (`xcde`, `xcde_launcher`), and the AppImage in the repository root (`Monado-x86_64.AppImage`). This single build runs identically on desktop PCs (AMD, Intel, NVIDIA) and the Steam Deck.
 
 ---
 
@@ -153,14 +150,9 @@ The easiest way to build everything is to execute `scripts/build_linux.sh`:
 ./scripts/build_linux.sh
 ```
 
-For **Steam Deck** builds (disables AMD DCC lean format restrictions to prevent pink/magenta texture artifacts):
-```bash
-./scripts/build_linux.sh --steamdeck
-```
-
 You can also pass `--appimage` to build and package in a single step:
 ```bash
-./scripts/build_linux.sh --steamdeck --appimage
+./scripts/build_linux.sh --appimage
 ```
 
 This automated script will:
@@ -196,19 +188,15 @@ If modifying specific components, you can invoke the individual build stages:
 To bundle Monado and all its runtime dependencies (FFmpeg, SDL3, Opus, shaderc, bundled fonts, desktop entry, and icons) into a single portable binary:
 
 ```bash
-# Generic Linux build:
 ./scripts/make_appimage.sh
-
-# Steam Deck build:
-./scripts/make_appimage.sh --steamdeck
 ```
 
-> [!TIP]
-> If you previously built using `./scripts/build_linux.sh --steamdeck`, running `./scripts/make_appimage.sh` automatically detects the Steam Deck target tag and creates `Monado-x86_64-steamdeck.AppImage`.
-
 The resulting AppImage is created directly in the repository root:
-* Generic Linux: `Monado-x86_64.AppImage`
-* Steam Deck: `Monado-x86_64-steamdeck.AppImage`
+```
+Monado-x86_64.AppImage
+```
+
+This AppImage is fully portable and runs on any standard x86_64 Linux desktop or SteamOS (Steam Deck).
 
 ---
 
