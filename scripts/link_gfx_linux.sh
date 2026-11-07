@@ -23,7 +23,8 @@ fi
 
 NVN="$(ls build/nvn/*.o | tr '\n' ' ')"
 
-LIBS="-lSDL3 -lshaderc_shared -lvulkan -lopus -lavcodec -lavformat -lavutil -lswscale -lswresample -lz -lpthread -ldl -lm"
+SHADERC_LIB=$(pkg-config --libs shaderc 2>/dev/null || echo "-lshaderc_shared")
+LIBS="-lSDL3 $SHADERC_LIB -lvulkan -lopus -lavcodec -lavformat -lavutil -lswscale -lswresample -lz -lpthread -ldl -lm"
 
 echo "  LINK $OUT"
 $CXX -o "$OUT" $RT $NVN $GAME_OBJS -march=x86-64-v2 $LIBS -rdynamic

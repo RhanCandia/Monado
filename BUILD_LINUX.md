@@ -24,7 +24,7 @@ This guide describes how to build, package, and run Monado (Xenoblade Chronicles
 
 ## Quick Start (Docker)
 
-If you have Docker installed, you can build Monado and package the AppImage in a clean Arch Linux container without manually configuring local packages:
+If you have Docker installed, you can build Monado and package the AppImage in a clean container without manually configuring local packages:
 
 ```bash
 # 1. Build the container image
