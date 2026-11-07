@@ -904,6 +904,8 @@ static void run_job(void (*fn)(void *), void *arg) {
         // [XCDE] R4 (docs/spec_lowend_gpu.md): on 6 logical CPUs or fewer (Ryzen 3 3200G: 4) leave two to the game and
         // render threads (SpartanPort 4b843a7: workers starved the GPU thread of a 4-thread i5, 36 -> 59 fps)
         if (cpus <= 6) n = cpus - 2 < 2 ? 2 : cpus - 2;
+        const char *ew = getenv("XCDE_WORKERS");
+        if (ew && atoi(ew) > 0) n = atoi(ew);
         static int logged;
         if (!logged++) LOG("[vk] %d shader workers (%d logical CPUs)\n", n, cpus);
         if (n > 16) n = 16;

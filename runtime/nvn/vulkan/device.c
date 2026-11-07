@@ -440,10 +440,13 @@ static VkPresentModeKHR present_mode(void) {
     // 59.99x Hz monitor some frames were shown twice and others never, at a steady "60 fps" in the counters (the user:
     // feels laggy, frametime flat). FIFO shows each frame once. Above 60 / unlimited: mailbox (FIFO would cap it).
     const char *e = getenv("LARECOMP_VK_PRESENT");
-    bool vs = !e && g_settings.vsync && g_settings.fps > 0 && g_settings.fps <= 60 && !getenv("XCDE_FPS_PERIOD_SCALE") &&
+    const char *desktop = getenv("XDG_CURRENT_DESKTOP");
+    bool gamescope = getenv("GAMESCOPE_WAYLAND_DISPLAY") != NULL || (desktop && !strcasecmp(desktop, "gamescope"));
+    bool vs = !e && !gamescope && g_settings.vsync && g_settings.fps > 0 && g_settings.fps <= 60 && !getenv("XCDE_FPS_PERIOD_SCALE") &&
               (!getenv("LARECOMP_HIDDEN") || getenv("XCDE_VSYNC_TEST")) && !diag_deterministic();  // (test runs: as before)
     if (vs) e = "fifo";
-    { static int logged; if (!logged++) LOG("[vk] present mode %s%s\n", e ? e : "mailbox", vs ? " (V-Sync option)" : ""); }
+    else if (gamescope && !e) e = "mailbox";
+    { static int logged; if (!logged++) LOG("[vk] present mode %s%s%s\n", e ? e : "mailbox", vs ? " (V-Sync option)" : "", gamescope ? " (Gamescope detected)" : ""); }
     VkPresentModeKHR want = !e || !strcmp(e, "mailbox") ? VK_PRESENT_MODE_MAILBOX_KHR
                           : !strcmp(e, "immediate") ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
     uint32_t n = 0;
