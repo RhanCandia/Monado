@@ -69,6 +69,10 @@ static volatile bool g_warp_used;   // (XCDE_WARP: the map jump manager)
 static volatile int g_rescan;       // the game's thread asks the scanner for a new scan
 #ifdef _WIN32
 static SRWLOCK g_found_lock = SRWLOCK_INIT;
+#else
+#include <pthread.h>
+#include <unistd.h>
+static pthread_rwlock_t g_found_lock = PTHREAD_RWLOCK_INITIALIZER;
 #endif
 
 static bool obj_ok(uint64_t o, int k) { return o && *(volatile uint64_t *)(uintptr_t)o == k_vtables[k]; }
@@ -89,10 +93,17 @@ static void heap_scan(Found *f) {
             }
         a = end;
     }
+#else
+    for (const volatile uint64_t *p = (const volatile uint64_t *)(uintptr_t)HEAP_BASE;
+         (uint64_t)(uintptr_t)(p + 1) <= HEAP_BASE + HEAP_MAX; p++) {
+        uint64_t v = *p;
+        if ((v >> 32) != 0x70) continue;
+        for (int k = 0; k < K_N; k++)
+            if (v == k_vtables[k] && f->n[k] < SET_MAX) f->obj[k][f->n[k]++] = (uint64_t)(uintptr_t)p;
+    }
 #endif
 }
 
-#ifdef _WIN32
 // Everything still there? (a scanned object freed or reused, a battle's gauges not created yet)
 static bool found_stale(const Found *f) {
     for (int k = 0; k < K_N; k++)
@@ -106,6 +117,7 @@ static bool found_stale(const Found *f) {
     return hud && *(volatile uint64_t *)(uintptr_t)(hud + 0x2c0) && !f->n[K_GAUGE];  // (a battle without its gauges)
 }
 
+#ifdef _WIN32
 static DWORD WINAPI party_scanner(LPVOID arg) {
     (void)arg;
     static Found scan;
@@ -127,6 +139,27 @@ static DWORD WINAPI party_scanner(LPVOID arg) {
     }
     return 0;
 }
+#else
+static void *party_scanner(void *arg) {
+    (void)arg;
+    static Found scan;
+    for (;;) {
+        pthread_rwlock_rdlock(&g_found_lock);
+        bool stale = found_stale(&g_found);
+        pthread_rwlock_unlock(&g_found_lock);
+        if (stale || g_rescan) {
+            g_rescan = 0;
+            heap_scan(&scan);
+            pthread_rwlock_wrlock(&g_found_lock);
+            g_found = scan;
+            pthread_rwlock_unlock(&g_found_lock);
+            usleep(scan.n[K_FIELD] ? 1000000 : 4000000);
+        } else {
+            usleep(250000);
+        }
+    }
+    return NULL;
+}
 #endif
 
 // The game's thread: a copy of the last scan (a few hundred bytes)
@@ -136,7 +169,9 @@ static void found_get(Found *f) {
     *f = g_found;
     ReleaseSRWLockShared(&g_found_lock);
 #else
-    memset(f, 0, sizeof *f);
+    pthread_rwlock_rdlock(&g_found_lock);
+    *f = g_found;
+    pthread_rwlock_unlock(&g_found_lock);
 #endif
 }
 static uint64_t found_one(const Found *f, int k) {
@@ -891,14 +926,18 @@ void party_game_tick(Cpu *c, uint64_t frame) {
             while (*p == ',') p++;
         }
     }
-#ifdef _WIN32
     static bool scanner;
     if (!scanner && (g_party_switch || nat || g_art_used || g_cam_used || g_warp_used)) {  // (only with the option on: no thread, no scans otherwise)
         scanner = true;
+#ifdef _WIN32
         HANDLE t = CreateThread(NULL, 0, party_scanner, NULL, 0, NULL);
         if (t) { SetThreadPriority(t, THREAD_PRIORITY_BELOW_NORMAL); CloseHandle(t); }
-    }
+#else
+        pthread_t t;
+        pthread_create(&t, NULL, party_scanner, NULL);
+        pthread_detach(t);
 #endif
+    }
     for (int i = 0; i < nat; i++) if (at[i] == frame) { at[i] = 0; g_switch_req = 1; }
     static int probe = -1;  // (tests: XCDE_PARTY_PROBE=<n>: the deployed members' positions every n frames)
     if (probe < 0) probe = getenv("XCDE_PARTY_PROBE") ? atoi(getenv("XCDE_PARTY_PROBE")) : 0;

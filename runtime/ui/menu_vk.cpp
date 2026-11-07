@@ -250,6 +250,53 @@ static void ui(void) {
     ImGui::End();
 }
 
+static void add_menu_font(ImGuiIO &io, float font_h) {
+    const char *appdir = getenv("APPDIR");
+    char appdir_font[512] = {0};
+    if (appdir) {
+        snprintf(appdir_font, sizeof(appdir_font), "%s/usr/share/fonts/Roboto-Medium.ttf", appdir);
+    }
+
+    const char *candidates[] = {
+        appdir_font[0] ? appdir_font : nullptr,
+        "third_party/imgui/misc/fonts/Roboto-Medium.ttf",
+        "third_party/imgui/misc/fonts/DroidSans.ttf",
+#ifdef _WIN32
+        "C:\\Windows\\Fonts\\segoeui.ttf",
+        "C:\\Windows\\Fonts\\arial.ttf",
+#elif defined(__APPLE__)
+        "/System/Library/Fonts/SFNS.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/Library/Fonts/Arial.ttf",
+#else
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/TTF/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/TTF/NotoSans-Regular.ttf",
+        "/usr/share/fonts/Adwaita/AdwaitaSans-Regular.ttf",
+        "/usr/share/fonts/TTF/AdwaitaSans-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+#endif
+    };
+
+    for (const char *path : candidates) {
+        if (!path || !path[0]) continue;
+        FILE *f = fopen(path, "rb");
+        if (f) {
+            fclose(f);
+            if (io.Fonts->AddFontFromFileTTF(path, font_h, nullptr, io.Fonts->GetGlyphRangesDefault()))
+                return;
+        }
+    }
+    io.Fonts->AddFontDefault();
+}
+
 extern "C" void menu_render(void *cmd, uint32_t w, uint32_t h) {
     static ImGuiContext *ctx;
     static float font_h;
@@ -263,8 +310,7 @@ extern "C" void menu_render(void *cmd, uint32_t w, uint32_t h) {
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
         font_h = fmaxf(16.0f, h / 1080.0f * 22.0f);
-        if (!io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", font_h, nullptr, io.Fonts->GetGlyphRangesDefault()))
-            io.Fonts->AddFontDefault();
+        add_menu_font(io, font_h);
         ImGui::StyleColorsDark();
         ImGui::GetStyle().ScaleAllSizes(font_h / 16.0f);
         if (!vk_imgui_backend_init()) { ImGui::DestroyContext(ctx); ctx = nullptr; open_ = false; return; }

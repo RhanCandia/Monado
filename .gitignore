@@ -1,5 +1,8 @@
 # Derived from the game: NEVER published (CONTRIBUTING.md, art. I)
 targets/
+targets
+target/
+target
 build/
 generated/
 dump/
@@ -10,6 +13,7 @@ dump/
 *.xcz
 *.keys
 *.log
+*.AppImage
 __pycache__/
 .venv/
 cache/

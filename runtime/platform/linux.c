@@ -280,3 +280,19 @@ int plat_cpu_count(void) { long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 
 int plat_thread_backtrace(void *pthread_handle, uint64_t *pcs, int max) { (void)pthread_handle; (void)pcs; (void)max; return 0; }
 int plat_guest_find(const unsigned char *pat, unsigned long n, unsigned long long *out, int max) { (void)pat; (void)n; (void)out; (void)max; return 0; }  // [XCDE] (not wired)
 unsigned long long plat_guest_dump(const char *path) { (void)path; return 0; }  // [XCDE] (not wired)
+
+void plat_mem_info(uint64_t *priv, uint64_t *ws, uint64_t *guest_commit) {
+    *priv = *ws = *guest_commit = 0;
+    FILE *f = fopen("/proc/self/statm", "r");
+    if (f) {
+        long pages = 0, resident = 0, share = 0;
+        if (fscanf(f, "%ld %ld %ld", &pages, &resident, &share) >= 2) {
+            long psz = sysconf(_SC_PAGESIZE);
+            *ws = (uint64_t)resident * (uint64_t)psz;
+            *priv = (uint64_t)(resident > share ? resident - share : resident) * (uint64_t)psz;
+        }
+        fclose(f);
+    }
+}
+
+void plat_mem_map(void) {}

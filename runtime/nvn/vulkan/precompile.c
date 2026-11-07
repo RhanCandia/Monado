@@ -235,7 +235,11 @@ static void scan_file(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return;
     fseek(f, 0, SEEK_END);
+#ifdef _WIN32
     long long n = _ftelli64(f);
+#else
+    long long n = ftello(f);
+#endif
     fseek(f, 0, SEEK_SET);
     bool big = n > (64 << 20);
     if (big) pthread_mutex_lock(&big_lock);

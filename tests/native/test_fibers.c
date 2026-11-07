@@ -3,8 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
 #include <windows.h>
 #include <process.h>
+#else
+#include <pthread.h>
+#endif
 
 #include "../../runtime/cpu.h"
 
@@ -72,7 +76,6 @@ static void test_thread_block(void) {
 }
 
 // a fiber suspended on thread 1 is resumed on thread 2 and must see thread 2's block (ssbu #43)
-static HANDLE ev_suspended, ev_done;
 static uint64_t tp_before, tp_after;
 static uint64_t shared_fiber = 0x5000;
 static void fn_migrant(Cpu *c) {
@@ -81,6 +84,9 @@ static void fn_migrant(Cpu *c) {
     tp_after = c->tpidr;           // resumed, on another thread
     c->x[0] = 0;
 }
+
+#ifdef _WIN32
+static HANDLE ev_suspended, ev_done;
 static unsigned __stdcall thread1(void *p) {
     (void)p;
     Cpu root; memset(&root, 0, sizeof root);
@@ -112,6 +118,54 @@ static void test_migration(void) {
     CHECK(tp_after == 0x2222);
     if (tp_after != 0x2222) printf("  tp_before=%llx tp_after=%llx\n", (unsigned long long)tp_before, (unsigned long long)tp_after);
 }
+#else
+static pthread_mutex_t m_sync = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cv_suspended = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t cv_done = PTHREAD_COND_INITIALIZER;
+static int is_suspended, is_done;
+
+static void *thread1(void *p) {
+    (void)p;
+    Cpu root; memset(&root, 0, sizeof root);
+    root.tpidr = 0x1111;
+    fib_init(&root, shared_fiber, fn_migrant, 0, (uint64_t)(uintptr_t)stackmem[1], sizeof stackmem[1]);
+    fib_switch(&root, shared_fiber);   // runs to its own suspend
+    pthread_mutex_lock(&m_sync);
+    is_suspended = 1;
+    pthread_cond_signal(&cv_suspended);
+    while (!is_done) pthread_cond_wait(&cv_done, &m_sync);
+    pthread_mutex_unlock(&m_sync);
+    return NULL;
+}
+static void *thread2(void *p) {
+    (void)p;
+    Cpu root; memset(&root, 0, sizeof root);
+    root.tpidr = 0x2222;
+    fib_switch(&root, shared_fiber);   // resume on this thread
+    fib_final(&root, shared_fiber);
+    return NULL;
+}
+static void test_migration(void) {
+    pthread_t t1, t2;
+    pthread_create(&t1, NULL, thread1, NULL);
+    pthread_mutex_lock(&m_sync);
+    while (!is_suspended) pthread_cond_wait(&cv_suspended, &m_sync);
+    pthread_mutex_unlock(&m_sync);
+
+    pthread_create(&t2, NULL, thread2, NULL);
+    pthread_join(t2, NULL);
+
+    pthread_mutex_lock(&m_sync);
+    is_done = 1;
+    pthread_cond_signal(&cv_done);
+    pthread_mutex_unlock(&m_sync);
+    pthread_join(t1, NULL);
+
+    CHECK(tp_before == 0x1111);
+    CHECK(tp_after == 0x2222);
+    if (tp_after != 0x2222) printf("  tp_before=%llx tp_after=%llx\n", (unsigned long long)tp_before, (unsigned long long)tp_after);
+}
+#endif
 
 // many create/switch/finalize cycles: no growth, no crash
 static void fn_quick(Cpu *c) { c->x[0] = 0; }

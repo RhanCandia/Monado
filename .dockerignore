@@ -1,0 +1,12 @@
+dump/
+target/
+targets/
+generated/
+build/
+.git/
+.venv/
+cache/
+save/
+crash/
+reports/
+mods/

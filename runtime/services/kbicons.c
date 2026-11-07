@@ -137,8 +137,34 @@ static stbtt_fontinfo g_font;
 static unsigned char *g_font_data;
 static bool font_load(void) {
     if (g_font_data) return true;
-    static const char *const fonts[] = {"C:/Windows/Fonts/segoeuib.ttf", "C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/segoeui.ttf"};
+    const char *appdir = getenv("APPDIR");
+    char appdir_font[512] = {0};
+    if (appdir) {
+        snprintf(appdir_font, sizeof(appdir_font), "%s/usr/share/fonts/Roboto-Medium.ttf", appdir);
+    }
+    const char *const fonts[] = {
+        appdir_font[0] ? appdir_font : NULL,
+        "third_party/imgui/misc/fonts/Roboto-Medium.ttf",
+        "third_party/imgui/misc/fonts/DroidSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/liberation-sans/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/TTF/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/noto/NotoSans-Bold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+        "/usr/share/fonts/TTF/NotoSans-Bold.ttf",
+        "/usr/share/fonts/Adwaita/AdwaitaSans-Regular.ttf",
+        "/usr/share/fonts/TTF/AdwaitaSans-Regular.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf",
+        "C:/Windows/Fonts/arialbd.ttf",
+        "C:/Windows/Fonts/segoeui.ttf",
+    };
     for (size_t i = 0; i < sizeof fonts / sizeof *fonts; i++) {
+        if (!fonts[i]) continue;
         FILE *f = fopen(fonts[i], "rb");
         if (!f) continue;
         fseek(f, 0, SEEK_END);

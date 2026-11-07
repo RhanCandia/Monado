@@ -6,6 +6,7 @@
 // RTX GPU or with another upscaler chosen nothing of this runs (temporal.c falls back to FSR 3).
 // Per frame (dlss_evaluate): constants (camera, jitter), DLSS options (quality mode, output size), the tagged inputs
 // (colour, depth, motion vectors at render size; output at window size) and the evaluation into the command buffer.
+#ifdef _WIN32
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -257,3 +258,32 @@ extern "C" bool dlss_evaluate(VkCommandBuffer cb, const TexBackend *color, const
     if (r != sl::Result::eOk) { static int n; if (n++ < 5) DLOG("[dlss] evaluate failed: %d\n", (int)r); return false; }
     return true;
 }
+#else
+#include <vulkan/vulkan.h>
+#include <stddef.h>
+#include <stdint.h>
+
+extern "C" {
+#include "temporal.h"
+
+bool dlss_init_early(void) { return false; }
+int dlss_instance_exts(const char **out, int max) { (void)out; (void)max; return 0; }
+void dlss_device_requirements(const char **ext, uint32_t *n, uint32_t max, VkPhysicalDeviceVulkan12Features *f12,
+                             VkPhysicalDeviceVulkan13Features *f13, uint32_t *extra_gfx, uint32_t *extra_compute) {
+    (void)ext; (void)n; (void)max; (void)f12; (void)f13; *extra_gfx = 0; *extra_compute = 0;
+}
+void dlss_device_created(VkInstance inst, VkPhysicalDevice phys, VkDevice dev, uint32_t qfam) {
+    (void)inst; (void)phys; (void)dev; (void)qfam;
+}
+PFN_vkVoidFunction dlss_proxy(VkDevice dev, const char *name) {
+    (void)dev; (void)name; return NULL;
+}
+bool dlss_available(void) { return false; }
+bool dlss_evaluate(VkCommandBuffer cb, const TexBackend *color, const TexBackend *mv, const TexBackend *depth,
+                   const TexBackend *out, const TexBackend *hud, const float jitter[2], bool reset, const TmpCamera *cam,
+                   const double reproj[16]) {
+    (void)cb; (void)color; (void)mv; (void)depth; (void)out; (void)hud; (void)jitter; (void)reset; (void)cam; (void)reproj;
+    return false;
+}
+}
+#endif

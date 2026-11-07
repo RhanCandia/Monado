@@ -442,8 +442,13 @@ static void create_image(NvnTexture *t, TexBackend *b) {
     static int lean = -1;
     if (lean < 0) {
         const char *e = getenv("XCDE_LEAN_FORMATS");
+#ifdef XCDE_TARGET_STEAMDECK
+        lean = e ? atoi(e) != 0 : 0;
+        LOG("[vk] lean image formats: %s (Steam Deck target: default off)\n", lean ? "on" : "off");
+#else
         lean = e ? atoi(e) != 0 : g_vk.props.vendorID != 0x10DE;
         LOG("[vk] lean image formats: %s\n", lean ? "on" : "off");
+#endif
     }
     if (lean && !depthfmt) {
         b->lean_fmt[b->nlean++] = vf;

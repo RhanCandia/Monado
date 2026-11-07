@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Monado
+Comment=Xenoblade Chronicles: Definitive Edition Native Recompilation
+Exec=xcde_launcher
+Icon=monado
+Categories=Game;Emulator;
+Terminal=false
+StartupNotify=true

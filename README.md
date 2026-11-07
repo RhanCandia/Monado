@@ -120,7 +120,12 @@ example) separately.
 ## Building
 
 The build runs the recompiler on your machine, from your own game files. It takes 10–20 minutes the first time and
-~5 GB of disk. You need [Git for Windows](https://git-scm.com/download/win) (the build scripts run in Git Bash).
+~5 GB of disk.
+
+> [!NOTE]
+> Building on Linux? See [BUILD_LINUX.md](BUILD_LINUX.md) for full Linux build, Docker container, and AppImage instructions.
+
+You need [Git for Windows](https://git-scm.com/download/win) for Windows builds (the build scripts run in Git Bash).
 
 ### The easy way: `Build Monado.bat`
 
