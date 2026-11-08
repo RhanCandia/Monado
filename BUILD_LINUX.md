@@ -17,8 +17,9 @@ This guide describes how to build, package, and run Monado (Xenoblade Chronicles
    - [Automated Build](#automated-build)
    - [Individual Build Steps](#individual-build-steps)
 5. [Packaging AppImage](#packaging-appimage)
-6. [Running the Game & Launcher](#running-the-game--launcher)
-7. [Troubleshooting & FAQs](#troubleshooting--faqs)
+6. [Packaging Releases & Distribution](#packaging-releases--distribution)
+7. [Running the Game & Launcher](#running-the-game--launcher)
+8. [Troubleshooting & FAQs](#troubleshooting--faqs)
 
 ---
 
@@ -197,6 +198,48 @@ Monado-x86_64.AppImage
 ```
 
 This AppImage is fully portable and runs on any standard x86_64 Linux desktop or SteamOS (Steam Deck).
+
+---
+
+## Packaging Releases & Distribution
+
+To prepare a complete, distributable release package containing the AppImage, portable precompiled shader cache, variant seed data, and a pre-configured `targets/` folder for game files:
+
+```bash
+./scripts/package_release.sh [version_tag]
+```
+
+Example:
+```bash
+./scripts/package_release.sh v1.0.0
+```
+
+### What is Included in the Release Bundle
+The resulting archive `build/release/Monado-<version>-linux-x86_64.tar.xz` contains:
+```
+Monado/
+├── Monado-x86_64.AppImage        # Fully portable standalone AppImage
+├── data/
+│   └── variants_seed.bin        # Deduplicated pipeline variant keys
+├── cache/                       # Sharable compiled shader cache
+│   ├── spirv.pack               # Consolidated SPIR-V bytecode pack (~1.2 GB compressed)
+│   ├── spirv.idx                # Fast binary index for SPIR-V pack
+│   └── variants.bin             # Variant records
+├── targets/
+│   └── PUT_GAME_FILES_HERE.txt  # Guidance on placing exefs/ and romfs/ dumps
+└── xcde.ini                     # Baseline configuration
+```
+
+> [!NOTE]
+> Hardware- and driver-specific files (`cache/vk_pipelines.bin`) and transient progress files (`cache/precompile_done.txt`) are intentionally excluded because Vulkan pipeline caches are tied to specific GPU driver versions and UUIDs. The launcher and runtime regenerate these automatically using the portable SPIR-V pack.
+
+### GitHub Actions Release Workflow
+The repository includes `.github/workflows/release.yml` which automatically builds and publishes releases when a version tag (`v*`) is pushed:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+It can also be dispatched manually from GitHub's **Actions** tab with optional inputs for draft releases or external cache sources.
 
 ---
 
