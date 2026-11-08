@@ -271,9 +271,33 @@ void plat_terminate(void) { _exit(0); }
 
 // [XCDE] T122: not sampled on this platform
 uint64_t plat_thread_pc(void *pthread_handle) { (void)pthread_handle; return 0; }
-void plat_thread_name(const char *name) { (void)name; }
-void plat_thread_background(void) {}
-void plat_thread_audio(void) {}
+// [XCDE] T112: names the calling thread (shown by top, htop, and debuggers)
+void plat_thread_name(const char *name) {
+    if (!name) return;
+    char buf[16];
+    snprintf(buf, sizeof buf, "%s", name);
+    pthread_setname_np(pthread_self(), buf);
+}
+
+// [XCDE] T160: background work (shader / pipeline builds): below the game, render and audio threads, so a burst of
+// builds on entering an area doesn't take CPU time from the frame on multi-thread CPUs. LARECOMP_WORKER_PRIO=0: normal.
+void plat_thread_background(void) {
+    const char *e = getenv("LARECOMP_WORKER_PRIO");
+    if (e && atoi(e) == 0) return;
+    struct sched_param sp = {0};
+    pthread_setschedparam(pthread_self(), SCHED_BATCH, &sp);
+    setpriority(PRIO_PROCESS, (id_t)gettid(), 10);
+}
+
+// [XCDE] audio feeders (audout / audren threads): higher priority so shader compilation or heavy scenes don't underrun
+// audio. LARECOMP_AUDIO_PRIO=0: normal priority.
+void plat_thread_audio(void) {
+    const char *e = getenv("LARECOMP_AUDIO_PRIO");
+    if (e && atoi(e) == 0) return;
+    struct sched_param sp = {.sched_priority = 1};
+    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sp) == 0) return;
+    setpriority(PRIO_PROCESS, (id_t)gettid(), -5);
+}
 int plat_cpu_count(void) { long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 ? (int)n : 4; }
 
 // [XCDE] T122: not available on this platform

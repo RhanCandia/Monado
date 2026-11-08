@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: ''
+      cache_url:
+        description: 'Optional URL to download precompiled cache (spirv.pack) if not on runner'
+        required: false
+        default: ''
+      is_draft:
+        description: 'Create as Draft Release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release-linux:
+    name: Build & Package Linux Release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Build Container
+        run: docker build -t monado-build .
+
+      - name: Build Monado & AppImage in Container
+        run: |
+          docker run --rm -v "$PWD:/monado" -w /monado -u $(id -u):$(id -g) monado-build bash -c "scripts/build_linux.sh --appimage"
+
+      - name: Fetch External Precompiled Cache (if provided)
+        if: ${{ inputs.cache_url != '' }}
+        run: |
+          mkdir -p cache
+          echo "Downloading precompiled cache from ${{ inputs.cache_url }}..."
+          curl -fL "${{ inputs.cache_url }}" -o cache/spirv.pack
+
+      - name: Package Release Archive (.tar.xz)
+        id: resolve_tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          elif [ -n "${{ inputs.tag_name }}" ]; then
+            TAG="${{ inputs.tag_name }}"
+          else
+            TAG="nightly-$(git rev-parse --short HEAD)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          scripts/package_release.sh "$TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.resolve_tag.outputs.tag }}
+          name: Monado ${{ steps.resolve_tag.outputs.tag }}
+          draft: ${{ inputs.is_draft || false }}
+          prerelease: false
+          files: |
+            build/release/Monado-*-linux-x86_64.tar.xz
+            build/release/Monado-x86_64.AppImage
+            build/release/SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

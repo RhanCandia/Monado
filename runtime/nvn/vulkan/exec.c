@@ -201,9 +201,8 @@ static uint64_t stat_pace_over;
 void vk_pace_frame(void) {
     if (diag_deterministic()) return;  // [XCDE] T029: real-time measurements must not steer the game
     static int on = -1;
-    // (only for the game's own 30 fps: with the FPS option above 30 the frame interval is forced every frame, and a
-    // "slow" counter would only make the game's internals believe the GPU is slow)
-    if (on < 0) { const char *e = getenv("LARECOMP_PACE"); on = e ? atoi(e) != 0 : g_settings.fps == 30 && !getenv("XCDE_FPS_INTERVAL"); }
+    // (only when explicitly requested or at 60 fps without forced intervals; at 30 fps XCDE is already in its native mode)
+    if (on < 0) { const char *e = getenv("LARECOMP_PACE"); on = e ? atoi(e) != 0 : (g_settings.fps == 60 && !getenv("XCDE_FPS_INTERVAL")); }
     static uint64_t last, last_wait;
     static uint8_t over[60];
     static int idx, nover, calm;
@@ -218,7 +217,8 @@ void vk_pace_frame(void) {
     static int log = -1;  // LARECOMP_LOG_PACE=1: each frame's period, vsync wait and busy time
     if (log < 0) log = getenv("LARECOMP_LOG_PACE") != NULL;
     if (log) LOG("[pace] period %.2f blocked %.2f busy %.2f ms\n", p / 1e6, wt / 1e6, busy);
-    int o = busy > 16.2;
+    double target_busy = g_settings.fps > 0 ? (1000.0 / (double)g_settings.fps) - 1.5 : 16.2;
+    int o = busy > target_busy;
     stat_pace_over += o;
     nover += o - over[idx];
     over[idx] = (uint8_t)o;
@@ -904,6 +904,8 @@ static void run_job(void (*fn)(void *), void *arg) {
         // [XCDE] R4 (docs/spec_lowend_gpu.md): on 6 logical CPUs or fewer (Ryzen 3 3200G: 4) leave two to the game and
         // render threads (SpartanPort 4b843a7: workers starved the GPU thread of a 4-thread i5, 36 -> 59 fps)
         if (cpus <= 6) n = cpus - 2 < 2 ? 2 : cpus - 2;
+        const char *ew = getenv("XCDE_WORKERS");
+        if (ew && atoi(ew) > 0) n = atoi(ew);
         static int logged;
         if (!logged++) LOG("[vk] %d shader workers (%d logical CPUs)\n", n, cpus);
         if (n > 16) n = 16;
